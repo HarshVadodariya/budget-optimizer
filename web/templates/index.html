@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monthly Saving Optimizer | Financial Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="light-mode">
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo-section">
+          <span class="logo-icon">💰</span>
+          <h1 class="logo-text">Saving Optimizer</h1>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <span class="theme-icon">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Model Metrics Card -->
+      {% if model_metrics %}
+      <div class="metrics-card card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span class="icon">📊</span>
+            Model Performance
+          </h2>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-label">Train Accuracy</div>
+            <div class="metric-value">{{ '%.1f'|format(model_metrics.train_accuracy_smape * 100) }}%</div>
+            <div class="metric-details">R²: {{ '%.3f'|format(model_metrics.train_r2) }} | MAE: {{ '%.0f'|format(model_metrics.train_mae) }}</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Test Accuracy</div>
+            <div class="metric-value">{{ '%.1f'|format(model_metrics.test_accuracy_smape * 100) }}%</div>
+            <div class="metric-details">R²: {{ '%.3f'|format(model_metrics.test_r2) }} | MAE: {{ '%.0f'|format(model_metrics.test_mae) }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <form method="post" action="/optimize" class="optimizer-form">
+        <!-- Profile Section -->
+        <div class="card profile-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon">👤</span>
+              Profile Information
+            </h2>
+          </div>
+          <div class="form-grid">
+            <div class="input-group">
+              <label class="input-label">
+                <span class="input-icon">💵</span>
+                Income ({{ currency }})
+              </label>
+              <input type="number" step="0.01" name="Income" class="input-field" placeholder="Enter monthly income" required />
+            </div>
+            <div class="input-group">
+              <label class="input-label">
+                <span class="input-icon">🎂</span>
+                Age
+              </label>
+              <input type="number" name="Age" min="0" class="input-field" placeholder="Your age" required />
+            </div>
+            <div class="input-group">
+              <label class="input-label">
+                <span class="input-icon">👨‍👩‍👧‍👦</span>
+                Dependents
+              </label>
+              <input type="number" name="Dependents" min="0" class="input-field" placeholder="Number of dependents" required />
+            </div>
+            <div class="input-group">
+              <label class="input-label">
+                <span class="input-icon">💼</span>
+                Occupation
+              </label>
+              <select name="Occupation" class="input-field">
+                {% for o in occupations %}
+                  <option value="{{ o }}">{{ o }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">
+                <span class="input-icon">🏙️</span>
+                City Tier
+              </label>
+              <select name="City_Tier" class="input-field">
+                {% for t in city_tiers %}
+                  <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">
+                <span class="input-icon">🎯</span>
+                Target Savings ({{ currency }})
+              </label>
+              <input type="number" step="0.01" name="TargetAmountINR" class="input-field" placeholder="Desired savings amount" required />
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Expenses Section -->
+        <div class="card expenses-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon">📝</span>
+              Monthly Expenses
+            </h2>
+          </div>
+          <div class="expenses-grid">
+            {% for cat in fixed %}
+            <div class="input-group">
+              <label class="input-label">
+                <span class="input-icon">🏠</span>
+                {{ cat }}
+              </label>
+              <input type="number" step="0.01" name="{{ cat }}" value="0" class="input-field" placeholder="0.00" />
+            </div>
+            {% endfor %}
+            {% for cat in adjustable %}
+            <div class="input-group">
+              <label class="input-label">
+                <span class="input-icon">
+                  {% if 'Groceries' in cat %}🛒
+                  {% elif 'Transport' in cat %}🚗
+                  {% elif 'Eating_Out' in cat %}🍽️
+                  {% elif 'Entertainment' in cat %}🎬
+                  {% elif 'Utilities' in cat %}⚡
+                  {% elif 'Healthcare' in cat %}🏥
+                  {% elif 'Education' in cat %}📚
+                  {% else %}💳
+                  {% endif %}
+                </span>
+                {{ cat }}
+              </label>
+              <input type="number" step="0.01" name="{{ cat }}" value="0" class="input-field" placeholder="0.00" />
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Optimize Button -->
+        <div class="actions-section">
+          <button type="submit" class="btn-optimize">
+            <span class="btn-icon">✨</span>
+            <span>Optimize Budget</span>
+          </button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>

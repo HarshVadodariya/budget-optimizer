@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Optimization Results | Saving Optimizer</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="light-mode">
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo-section">
+          <span class="logo-icon">💰</span>
+          <h1 class="logo-text">Saving Optimizer</h1>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <span class="theme-icon">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- Model Metrics Card -->
+      {% if model_metrics %}
+      <div class="metrics-card card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span class="icon">📊</span>
+            Model Performance
+          </h2>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-label">Train Accuracy</div>
+            <div class="metric-value">{{ '%.1f'|format(model_metrics.train_accuracy_smape * 100) }}%</div>
+            <div class="metric-details">R²: {{ '%.3f'|format(model_metrics.train_r2) }} | MAE: {{ '%.0f'|format(model_metrics.train_mae) }}</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Test Accuracy</div>
+            <div class="metric-value">{{ '%.1f'|format(model_metrics.test_accuracy_smape * 100) }}%</div>
+            <div class="metric-details">R²: {{ '%.3f'|format(model_metrics.test_r2) }} | MAE: {{ '%.0f'|format(model_metrics.test_mae) }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Results Summary Card -->
+      <div class="card results-summary-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span class="icon">📈</span>
+            Optimization Results
+          </h2>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">Requested Savings</div>
+            <div class="summary-value">{{ currency }} {{ '%.2f'|format(result.requested_savings_inr) }}</div>
+          </div>
+          <div class="summary-item highlight">
+            <div class="summary-label">Achieved Savings</div>
+            <div class="summary-value">{{ currency }} {{ '%.2f'|format(result.achieved_savings_inr) }}</div>
+            <div class="summary-percent">{{ '%.1f'|format(result.achieved_savings_pct * 100) }}% of total</div>
+          </div>
+          {% if result.model_suggested_savings_inr is defined %}
+          <div class="summary-item">
+            <div class="summary-label">Model Suggested</div>
+            <div class="summary-value">{{ currency }} {{ '%.2f'|format(result.model_suggested_savings_inr) }}</div>
+          </div>
+          {% endif %}
+          <div class="summary-item">
+            <div class="summary-label">Status</div>
+            <div class="summary-value">
+              <span class="badge {{ 'badge-success' if result.feasible else 'badge-warning' }}">
+                {{ '✓ Feasible' if result.feasible else '⚠ Limited' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-section">
+          <div class="progress-label">
+            <span>Savings Goal Progress</span>
+            <span class="progress-percent">{{ '%.0f'|format((result.achieved_savings_inr / result.requested_savings_inr * 100) if result.requested_savings_inr > 0 else 0) }}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ '%.0f'|format((result.achieved_savings_inr / result.requested_savings_inr * 100) if result.requested_savings_inr > 0 else 0) }}%"></div>
+          </div>
+        </div>
+
+        {% if not result.feasible %}
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠️</span>
+          <span>Target exceeded maximum feasible savings of {{ currency }} {{ '%.2f'|format(result.capacity_inr) }}. Showing best achievable plan.</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Budget Breakdown Card -->
+      <div class="card budget-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span class="icon">💼</span>
+            Budget Breakdown
+          </h2>
+        </div>
+        <div class="table-container">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Current</th>
+                <th>Cut</th>
+                <th>New Budget</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cat, cur in result.current_spend.items() %}
+              <tr>
+                <td class="category-name">
+                  <span class="category-icon">
+                    {% if 'Rent' in cat %}🏠
+                    {% elif 'Loan' in cat %}💳
+                    {% elif 'Groceries' in cat %}🛒
+                    {% elif 'Transport' in cat %}🚗
+                    {% elif 'Eating_Out' in cat %}🍽️
+                    {% elif 'Entertainment' in cat %}🎬
+                    {% elif 'Utilities' in cat %}⚡
+                    {% elif 'Healthcare' in cat %}🏥
+                    {% elif 'Education' in cat %}📚
+                    {% else %}💵
+                    {% endif %}
+                  </span>
+                  {{ cat }}
+                </td>
+                <td class="amount">{{ currency }} {{ '%.2f'|format(cur) }}</td>
+                <td class="amount cut-amount">-{{ currency }} {{ '%.2f'|format(result.cuts[cat]) }}</td>
+                <td class="amount new-amount">{{ currency }} {{ '%.2f'|format(result.new_budget[cat]) }}</td>
+                <td>
+                  {% if cat in result.reasons.binding_constraints %}
+                  <span class="badge badge-info">Binding</span>
+                  {% else %}
+                  <span class="badge badge-neutral">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Insights Card -->
+      <div class="card insights-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span class="icon">💡</span>
+            Optimization Insights
+          </h2>
+        </div>
+        <div class="insights-content">
+          <div class="insight-item">
+            <span class="insight-icon">🎯</span>
+            <div>
+              <div class="insight-title">Recommended Cuts</div>
+              <div class="insight-text">{{ result.reasons.cheapest_categories | join(', ') }}</div>
+            </div>
+          </div>
+          {% if result.reasons.binding_constraints %}
+          <div class="insight-item">
+            <span class="insight-icon">⚖️</span>
+            <div>
+              <div class="insight-title">Binding Constraints</div>
+              <div class="insight-text">{{ result.reasons.binding_constraints | join(', ') }}</div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Spending Analysis by Occupation Card -->
+      <div class="card analytics-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span class="icon">📊</span>
+            Spending Analysis by Occupation
+          </h2>
+        </div>
+        <div class="charts-container">
+          <div class="chart-wrapper">
+            <h3 class="chart-title">Average Spending by Occupation & Category</h3>
+            <canvas id="occupationCategoryChart"></canvas>
+          </div>
+          <div class="chart-wrapper">
+            <h3 class="chart-title">Total Spending by Occupation</h3>
+            <canvas id="occupationTotalChart"></canvas>
+          </div>
+          <div class="chart-wrapper">
+            <h3 class="chart-title">Category Spending Comparison</h3>
+            <canvas id="categoryComparisonChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions-section">
+        <a href="/" class="btn-secondary">
+          <span class="btn-icon">←</span>
+          <span>New Optimization</span>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/script.js"></script>
+  <script src="/static/charts.js"></script>
+</body>
+</html>
